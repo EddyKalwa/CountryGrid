@@ -4,20 +4,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,76 +34,91 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CountryTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    CountryList(
-                        countries = getSampleCountries(),
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                CountryApp()
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CountryTopAppBar(modifier: Modifier = Modifier) {
+    CenterAlignedTopAppBar(
+        title = {
+            Text(
+                text = "Liste des Pays",
+                style = MaterialTheme.typography.headlineLarge
+            )
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun CountryIcon(
+    @DrawableRes flagResId: Int,
+    modifier: Modifier = Modifier
+) {
+    Image(
+        painter = painterResource(flagResId),
+        contentDescription = null,
+        modifier = modifier
+            .size(72.dp)
+            .clip(CircleShape),
+        contentScale = ContentScale.Crop
+    )
 }
 
 @Composable
 fun CountryItem(country: Country, modifier: Modifier = Modifier) {
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 10.dp)
-            .animateContentSize(),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-        )
+            .padding(8.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .animateContentSize(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
         ) {
-            // Flag avec effet lumineux
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                MaterialTheme.colorScheme.surface
-                            )
-                        )
-                    ),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(
-                    painter = painterResource(id = country.flagResId),
-                    contentDescription = "Drapeau de ${country.name}",
-                    modifier = Modifier.size(64.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
+                CountryIcon(flagResId = country.flagResId)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 12.dp)
+                ) {
+                    Text(
+                        text = country.name,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = "Capitale : ${country.capital}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                CountryItemButton(
+                    expanded = expanded,
+                    onClick = { expanded = !expanded }
                 )
             }
 
-            Spacer(modifier = Modifier.width(20.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
+            if (expanded) {
                 Text(
-                    text = country.name,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Capitale: ${country.capital}",
+                    text = "Code ISO : ${country.code}",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Code: ${country.code}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary
+                    modifier = Modifier.padding(12.dp)
                 )
             }
         }
@@ -108,21 +126,29 @@ fun CountryItem(country: Country, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun CountryList(countries: List<Country>, modifier: Modifier = Modifier) {
-    LazyColumn(
-        modifier = modifier
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
-            .padding(bottom = 16.dp)
-    ) {
-        items(countries) { country ->
-            CountryItem(country = country)
+private fun CountryItemButton(
+    expanded: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(onClick = onClick, modifier = modifier) {
+        Icon(
+            imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            contentDescription = "Bouton d’expansion",
+            tint = MaterialTheme.colorScheme.secondary
+        )
+    }
+}
+
+@Composable
+fun CountryApp() {
+    Scaffold(
+        topBar = { CountryTopAppBar() }
+    ) { innerPadding ->
+        LazyColumn(contentPadding = innerPadding) {
+            items(getSampleCountries()) { country ->
+                CountryItem(country = country)
+            }
         }
     }
 }
@@ -144,8 +170,8 @@ fun getSampleCountries(): List<Country> {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewCountryList() {
+fun CountryPreview() {
     CountryTheme {
-        CountryList(countries = getSampleCountries())
+        CountryApp()
     }
 }

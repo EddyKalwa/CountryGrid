@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -141,13 +142,42 @@ private fun CountryItemButton(
 }
 
 @Composable
+fun LandingScreen(
+    onContinueClicked: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "KARIBU",
+            style = MaterialTheme.typography.headlineLarge
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = onContinueClicked
+        ) {
+            Text("Voir mes pays")
+        }
+    }
+}
+
+@Composable
 fun CountryApp() {
-    Scaffold(
-        topBar = { CountryTopAppBar() }
-    ) { innerPadding ->
-        LazyColumn(contentPadding = innerPadding) {
-            items(getSampleCountries()) { country ->
-                CountryItem(country = country)
+    var shouldShowLanding by rememberSaveable { mutableStateOf(true) }
+
+    if (shouldShowLanding) {
+        LandingScreen(onContinueClicked = { shouldShowLanding = false })
+    } else {
+        Scaffold(
+            topBar = { CountryTopAppBar() }
+        ) { innerPadding ->
+            LazyColumn(contentPadding = innerPadding) {
+                items(getSampleCountries()) { country ->
+                    CountryItem(country = country)
+                }
             }
         }
     }
